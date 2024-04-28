@@ -5,7 +5,7 @@ const SpotifyWebAPI = require("spotify-web-api-node");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const app = express();
-const PORT = 4242;
+const PORT = process.env.PORT || 4242;
 
 app.use(bodyParser.json());
 app.use(
@@ -76,3 +76,5 @@ app.listen(PORT, function (err) {
     if (err) console.log("Error in server setup");
     console.log("Server listening on Port", PORT);
 });
+
+module.exports = app;
