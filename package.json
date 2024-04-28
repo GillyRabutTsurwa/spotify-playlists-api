@@ -5,8 +5,8 @@
     "main": "server.js",
     "scripts": {
         "serve": "nodemon server.js",
-        "start": "node server.js",
-        "build": "node server.js"
+        "start": "node api/index.ts",
+        "build": "node api/index.ts"
     },
     "keywords": [],
     "author": "",
