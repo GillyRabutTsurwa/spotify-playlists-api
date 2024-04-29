@@ -4,19 +4,27 @@
     "description": "",
     "main": "server.js",
     "scripts": {
-        "serve": "nodemon server.js",
-        "start": "node api/index.ts",
-        "build": "node api/index.ts"
+        "preserve": "npm run build",
+        "serve": "tsc -w & NODE_ENV=development nodemon dist/server.js",
+        "build": "rimraf dist && tsc",
+        "prestart": "npm run build",
+        "start": "node dist/server.js"
     },
     "keywords": [],
     "author": "",
     "license": "ISC",
     "dependencies": {
+        "@types/spotify-web-api-node": "^5.0.11",
         "body-parser": "^1.20.2",
         "cors": "^2.8.5",
         "dotenv": "^16.4.5",
         "express": "^4.19.2",
         "query-string": "^9.0.0",
+        "rimraf": "^5.0.5",
         "spotify-web-api-node": "^5.0.2"
+    },
+    "devDependencies": {
+        "@types/cors": "^2.8.17",
+        "@types/express": "^4.17.21"
     }
 }

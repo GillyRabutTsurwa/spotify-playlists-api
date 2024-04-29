@@ -1,11 +1,13 @@
-require("dotenv").config();
+import * as dotenv from "dotenv";
+import express, { Express, Request, Response } from "express";
+import bodyParser from "body-parser";
+import cors from "cors";
+import SpotifyWebAPI from "spotify-web-api-node";
 
-const express = require("express");
-const SpotifyWebAPI = require("spotify-web-api-node");
-const bodyParser = require("body-parser");
-const cors = require("cors");
-const app = express();
-const PORT = process.env.PORT || 4242;
+const app: Express = express();
+const PORT: number | string = process.env.PORT || 4242;
+
+dotenv.config();
 
 app.use(bodyParser.json());
 app.use(
@@ -14,13 +16,13 @@ app.use(
     })
 );
 
-app.get("/", (_, response) => {
-    response.send("Spotify Settings");
+app.get("/", (_, response: Response) => {
+    response.send(`Spotify Settings depuis ${process.env.CLIENT_URL}`);
 });
 
-app.post("/refresh", (request, response) => {
-    const refreshToken = request.body.refreshToken;
-    const spotifyAPI = new SpotifyWebAPI({
+app.post("/refresh", (request: Request, response: Response) => {
+    const refreshToken: string = request.body.refreshToken;
+    const spotifyAPI: SpotifyWebAPI = new SpotifyWebAPI({
         redirectUri: process.env.CLIENT_REDIRECT_URI,
         clientId: process.env.SPOTIFY_CLIENT_ID,
         clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
@@ -44,13 +46,12 @@ app.post("/refresh", (request, response) => {
         });
 });
 
-app.post("/login", (request, response) => {
-    const code = request.body.code;
-    const spotifyAPI = new SpotifyWebAPI({
+app.post("/login", (request: Request, response: Response) => {
+    const code: string = request.body.code;
+    const spotifyAPI: SpotifyWebAPI = new SpotifyWebAPI({
         redirectUri: process.env.CLIENT_REDIRECT_URI,
         clientId: process.env.SPOTIFY_CLIENT_ID,
         clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-        refreshToken: null,
     });
     spotifyAPI
         .authorizationCodeGrant(code)
@@ -72,9 +73,6 @@ app.post("/login", (request, response) => {
         });
 });
 
-app.listen(PORT, function (err) {
-    if (err) console.log("Error in server setup");
+app.listen(PORT, () => {
     console.log("Server listening on Port", PORT);
 });
-
-module.exports = app;
