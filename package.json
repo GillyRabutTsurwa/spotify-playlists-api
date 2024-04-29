@@ -5,7 +5,7 @@
     "main": "server.js",
     "scripts": {
         "preserve": "npm run build",
-        "serve": "tsc -w & NODE_ENV=development nodemon dist/server.js",
+        "serve": "NODE_ENV=development nodemon server.ts",
         "build": "rimraf dist && tsc",
         "prestart": "npm run build",
         "start": "node dist/server.js"
