@@ -45,10 +45,16 @@ const PORT = process.env.PORT || 4242;
 dotenv.config();
 app.use(body_parser_1.default.json());
 app.use((0, cors_1.default)({
-    origin: process.env.CLIENT_URL,
+// origin: "process.env.CLIENT_URL",
 }));
 app.get("/", (_, response) => {
-    response.send(`Spotify Settings depuis ${process.env.CLIENT_URL}`);
+    response.send("Spotify Settings Una");
+});
+app.get("/authorisation", (_, response) => {
+    const redirectURL = `https://accounts.spotify.com/authorize?client_id=${process.env.SPOTIFY_CLIENT_ID}&response_type=code&redirect_uri=${process.env.CLIENT_REDIRECT_URI}&scope=streaming%20user-read-email%20user-read-private%20user-library-read%20user-library-modify%20user-read-playback-state%20user-modify-playback-state%20user-read-currently-playing`;
+    response.json({
+        url: redirectURL
+    });
 });
 app.post("/refresh", (request, response) => __awaiter(void 0, void 0, void 0, function* () {
     const refreshToken = request.body.refreshToken;

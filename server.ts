@@ -1,6 +1,7 @@
 import * as dotenv from "dotenv";
 import express, { Express, Request, Response } from "express";
 import bodyParser from "body-parser";
+import queryString from "node:querystring";
 import cors from "cors";
 import SpotifyWebAPI from "spotify-web-api-node";
 
@@ -12,13 +13,21 @@ dotenv.config();
 app.use(bodyParser.json());
 app.use(
     cors({
-        origin: process.env.CLIENT_URL,
+        // origin: "process.env.CLIENT_URL",
     })
 );
 
 app.get("/", (_, response: Response) => {
-    response.send(`Spotify Settings depuis ${process.env.CLIENT_URL}`);
+    response.send("Spotify Settings Una");
 });
+
+app.get("/authorisation", (_, response: Response) => {
+    const redirectURL = `https://accounts.spotify.com/authorize?client_id=${process.env.SPOTIFY_CLIENT_ID}&response_type=code&redirect_uri=${process.env.CLIENT_REDIRECT_URI}&scope=streaming%20user-read-email%20user-read-private%20user-library-read%20user-library-modify%20user-read-playback-state%20user-modify-playback-state%20user-read-currently-playing`;
+
+    response.json({
+        url: redirectURL
+    });
+})
 
 app.post("/refresh", async (request: Request, response: Response) => {
     const refreshToken: string = request.body.refreshToken;
