@@ -45,7 +45,8 @@ const PORT = process.env.PORT || 4242;
 dotenv.config();
 app.use(body_parser_1.default.json());
 app.use((0, cors_1.default)({
-// origin: "process.env.CLIENT_URL",
+    // origin: "process.env.CLIENT_URL",
+    origin: "*",
 }));
 app.get("/", (_, response) => {
     response.send("Spotify Settings Una");

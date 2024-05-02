@@ -1,7 +1,6 @@
 import * as dotenv from "dotenv";
 import express, { Express, Request, Response } from "express";
 import bodyParser from "body-parser";
-import queryString from "node:querystring";
 import cors from "cors";
 import SpotifyWebAPI from "spotify-web-api-node";
 
