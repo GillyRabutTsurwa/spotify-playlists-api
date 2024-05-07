@@ -4,12 +4,28 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import SpotifyWebAPI from "spotify-web-api-node";
 import NodeCache from "node-cache";
+import mongoose from "mongoose";
 
 const app: Express = express();
 const PORT: number | string = process.env.PORT || 4242;
 const cache = new NodeCache({
     stdTTL: 3600,
 });
+const DATABASE_URL: string = "mongodb://127.0.0.1:27017";
+const db = mongoose.connection;
+
+(async () => {
+    try {
+        const dbServer = await mongoose.connect(DATABASE_URL, {
+            dbName: "spotify",
+        });
+        console.log(`Connected to the ${dbServer.connection.db.databaseName} database @ host ${dbServer.connection.host}`);
+    } catch (err) {
+        console.error(err);
+    } finally {
+        mongoose.set("debug", true);
+    }
+})();
 
 dotenv.config();
 
