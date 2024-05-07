@@ -3,16 +3,19 @@ import express, { Express, Request, Response } from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
 import SpotifyWebAPI from "spotify-web-api-node";
+import NodeCache from "node-cache";
 
 const app: Express = express();
 const PORT: number | string = process.env.PORT || 4242;
+const cache = new NodeCache({
+    stdTTL: 3600,
+});
 
 dotenv.config();
 
-app.use(bodyParser.json());
+app.use(bodyParser.urlencoded());
 app.use(
     cors({
-        // origin: "process.env.CLIENT_URL",
         origin: "*",
     })
 );
@@ -41,6 +44,7 @@ app.post("/login", async (request: Request, response: Response) => {
         const authResponse = await spotifyAPI.authorizationCodeGrant(code);
         const data = authResponse.body;
         console.log(data);
+        cache.set("accessToken", data.access_token);
         response.json({
             accessToken: data.access_token,
             refreshToken: data.refresh_token,
@@ -66,14 +70,76 @@ app.post("/refresh", async (request: Request, response: Response) => {
         const tokenResponse = await spotifyAPI.refreshAccessToken();
         const data = tokenResponse.body;
         console.log(data);
+        cache.set("accessToken", data.access_token);
         response.json({
             accessToken: data.access_token,
             expiresIn: data.expires_in,
         });
     } catch (err) {
-        console.error("Could not refresh accesss token", err); //NOTE: haven't decided if i want to make my own error handling functionality
+        console.error("Could not refresh accesss token", err);
     } finally {
         console.log("Done attempting access token refresh");
+    }
+});
+
+app.get("/playlist/teststeezy", async (request: Request, response: Response) => {
+    const accessToken: string | undefined = cache.get("accessToken") as string;
+    if (!accessToken) {
+        response.status(401).json({ error: "Access Token Not Found In These Skreetz" });
+        return;
+    }
+    const spotifyAPI: SpotifyWebAPI = new SpotifyWebAPI({
+        redirectUri: process.env.CLIENT_REDIRECT_URI,
+        clientId: process.env.SPOTIFY_CLIENT_ID,
+        clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+    });
+    spotifyAPI.setAccessToken(accessToken);
+    try {
+        const réponse = await spotifyAPI.getPlaylist("4E7Vswz1uCbsSyh3VF7Dj2");
+        console.log(réponse.body);
+        response.json({
+            name: réponse.body.name,
+            description: réponse.body.description,
+            owner: {
+                name: réponse.body.owner.display_name,
+                url: réponse.body.owner.external_urls.spotify,
+            },
+            songs: réponse.body.tracks.items,
+            totalSongs: réponse.body.tracks.total,
+            previous_url: réponse.body.tracks.previous,
+            next_url: réponse.body.tracks.next,
+        });
+    } catch (err) {
+        console.error("Error fetching songs", err);
+        response.status(500).json({ error: "Error fetching songs" });
+    }
+});
+
+app.get("/liked", async (request: Request, response: Response) => {
+    const accessToken: string | undefined = cache.get("accessToken") as string;
+    if (!accessToken) {
+        response.status(401).json({ error: "Access Token Not Found In These Skreetz" });
+        return;
+    }
+    const spotifyAPI: SpotifyWebAPI = new SpotifyWebAPI({
+        redirectUri: process.env.CLIENT_REDIRECT_URI,
+        clientId: process.env.SPOTIFY_CLIENT_ID,
+        clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+    });
+    spotifyAPI.setAccessToken(accessToken);
+    try {
+        const userTracks = await spotifyAPI.getMySavedTracks();
+        const tracks = userTracks.body.items.map((item: any) => {
+            return {
+                name: item.track.name,
+                artist: item.track.artists[0].name,
+                album: item.track.album.name,
+            };
+        });
+        response.json(tracks);
+    } catch (err) {
+        console.error("Error fetching songs", err);
+        response.status(500).json({ error: "Error fetching songs" });
     }
 });
 
