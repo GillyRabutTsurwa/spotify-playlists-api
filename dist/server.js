@@ -41,11 +41,29 @@ const body_parser_1 = __importDefault(require("body-parser"));
 const cors_1 = __importDefault(require("cors"));
 const spotify_web_api_node_1 = __importDefault(require("spotify-web-api-node"));
 const node_cache_1 = __importDefault(require("node-cache"));
+const mongoose_1 = __importDefault(require("mongoose"));
+const vapourwave_1 = __importDefault(require("./models/vapourwave"));
+const liked_1 = __importDefault(require("./models/liked"));
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 4242;
 const cache = new node_cache_1.default({
     stdTTL: 3600,
 });
+const DATABASE_URL = "mongodb://127.0.0.1:27017";
+(() => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const dbServer = yield mongoose_1.default.connect(DATABASE_URL, {
+            dbName: "spotify",
+        });
+        console.log(`Connected to the ${dbServer.connection.db.databaseName} database @ host ${dbServer.connection.host}`);
+    }
+    catch (err) {
+        console.error(err);
+    }
+    finally {
+        mongoose_1.default.set("debug", true);
+    }
+}))();
 dotenv.config();
 app.use(body_parser_1.default.urlencoded());
 app.use((0, cors_1.default)({
@@ -54,6 +72,7 @@ app.use((0, cors_1.default)({
 app.get("/", (_, response) => {
     response.send("Spotify Settings Una");
 });
+// Authorisation & Token Handling
 app.get("/authorisation", (_, response) => {
     const redirectURL = `https://accounts.spotify.com/authorize?client_id=${process.env.SPOTIFY_CLIENT_ID}&response_type=code&redirect_uri=${process.env.CLIENT_REDIRECT_URI}&scope=streaming%20user-read-email%20user-read-private%20user-library-read%20user-library-modify%20user-read-playback-state%20user-modify-playback-state%20user-read-currently-playing`;
     response.json({
@@ -110,7 +129,9 @@ app.post("/refresh", (request, response) => __awaiter(void 0, void 0, void 0, fu
         console.log("Done attempting access token refresh");
     }
 }));
-app.get("/playlist/teststeezy", (request, response) => __awaiter(void 0, void 0, void 0, function* () {
+// ================================================================================================
+// Track Management
+app.post("/playlist/teststeezy", (request, response) => __awaiter(void 0, void 0, void 0, function* () {
     const accessToken = cache.get("accessToken");
     if (!accessToken) {
         response.status(401).json({ error: "Access Token Not Found In These Skreetz" });
@@ -125,25 +146,36 @@ app.get("/playlist/teststeezy", (request, response) => __awaiter(void 0, void 0,
     try {
         const réponse = yield spotifyAPI.getPlaylist("4E7Vswz1uCbsSyh3VF7Dj2");
         console.log(réponse.body);
-        response.json({
-            name: réponse.body.name,
-            description: réponse.body.description,
-            owner: {
-                name: réponse.body.owner.display_name,
-                url: réponse.body.owner.external_urls.spotify,
-            },
-            songs: réponse.body.tracks.items,
-            totalSongs: réponse.body.tracks.total,
-            previous_url: réponse.body.tracks.previous,
-            next_url: réponse.body.tracks.next,
-        });
+        réponse.body.tracks.items.forEach((currentTrack) => __awaiter(void 0, void 0, void 0, function* () {
+            const albumArtwork = currentTrack.track.album.images.find((currentAlbumImage) => currentAlbumImage.width === 300);
+            const existingTrack = yield vapourwave_1.default.findOne({ uri: currentTrack.track.uri });
+            if (existingTrack)
+                return;
+            try {
+                yield vapourwave_1.default.create({
+                    artist: currentTrack.track.artists[0].name,
+                    title: currentTrack.track.name,
+                    uri: currentTrack.track.uri,
+                    album: currentTrack.track.album.name,
+                    albumImg: albumArtwork.url,
+                });
+            }
+            catch (err) {
+                console.error("Problem populating documents to database");
+            }
+        }));
+        response.status(200).json({ message: "Songs successfully stored", propotype: réponse.body.tracks });
     }
     catch (err) {
         console.error("Error fetching songs", err);
         response.status(500).json({ error: "Error fetching songs" });
     }
 }));
-app.get("/liked", (request, response) => __awaiter(void 0, void 0, void 0, function* () {
+app.get("/playlists/vapourwave", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
+    const songs = yield vapourwave_1.default.find();
+    response.json(songs);
+}));
+app.post("/liked", (request, response) => __awaiter(void 0, void 0, void 0, function* () {
     const accessToken = cache.get("accessToken");
     if (!accessToken) {
         response.status(401).json({ error: "Access Token Not Found In These Skreetz" });
@@ -156,21 +188,38 @@ app.get("/liked", (request, response) => __awaiter(void 0, void 0, void 0, funct
     });
     spotifyAPI.setAccessToken(accessToken);
     try {
-        const userTracks = yield spotifyAPI.getMySavedTracks();
-        const tracks = userTracks.body.items.map((item) => {
-            return {
-                name: item.track.name,
-                artist: item.track.artists[0].name,
-                album: item.track.album.name,
-            };
-        });
-        response.json(tracks);
+        const réponse = yield spotifyAPI.getMySavedTracks();
+        console.log(réponse.body);
+        réponse.body.items.forEach((currentTrack) => __awaiter(void 0, void 0, void 0, function* () {
+            const albumArtwork = currentTrack.track.album.images.find((currentAlbumImage) => currentAlbumImage.width === 300);
+            const existingTrack = yield liked_1.default.findOne({ uri: currentTrack.track.uri });
+            if (existingTrack)
+                return;
+            try {
+                yield liked_1.default.create({
+                    artist: currentTrack.track.artists[0].name,
+                    title: currentTrack.track.name,
+                    uri: currentTrack.track.uri,
+                    album: currentTrack.track.album.name,
+                    albumImg: albumArtwork.url,
+                });
+            }
+            catch (err) {
+                console.error("Problem populating documents to database");
+            }
+        }));
+        response.status(200).json({ message: "Songs successfully stored", propotype: réponse.body.items });
     }
     catch (err) {
         console.error("Error fetching songs", err);
         response.status(500).json({ error: "Error fetching songs" });
     }
 }));
+app.get("/playlists/liked", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
+    const songs = yield liked_1.default.find();
+    response.json(songs);
+}));
+// =================================================================================================
 app.listen(PORT, () => {
     console.log("Server listening on Port", PORT);
 });
