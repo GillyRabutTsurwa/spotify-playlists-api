@@ -4,12 +4,31 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import SpotifyWebAPI from "spotify-web-api-node";
 import NodeCache from "node-cache";
+import mongoose from "mongoose";
+import { instantiateSpotify } from "./functions/spotify";
+import { Afrique, House, Favourites, Vapourwave } from "./models/track";
+import { populatePlaylist } from "./functions/playlists";
+import { populateFavourites } from "./functions/favourites";
 
 const app: Express = express();
 const PORT: number | string = process.env.PORT || 4242;
 const cache = new NodeCache({
     stdTTL: 3600,
 });
+const DATABASE_URL: string = "mongodb://127.0.0.1:27017";
+
+(async () => {
+    try {
+        const dbServer = await mongoose.connect(DATABASE_URL, {
+            dbName: "spotify",
+        });
+        console.log(`Connected to the ${dbServer.connection.db.databaseName} database @ host ${dbServer.connection.host}`);
+    } catch (err) {
+        console.error(err);
+    } finally {
+        mongoose.set("debug", true);
+    }
+})();
 
 dotenv.config();
 
@@ -23,6 +42,8 @@ app.use(
 app.get("/", (_, response: Response) => {
     response.send("Spotify Settings Una");
 });
+
+// Authorisation & Token Handling
 
 app.get("/authorisation", (_, response: Response) => {
     const redirectURL = `https://accounts.spotify.com/authorize?client_id=${process.env.SPOTIFY_CLIENT_ID}&response_type=code&redirect_uri=${process.env.CLIENT_REDIRECT_URI}&scope=streaming%20user-read-email%20user-read-private%20user-library-read%20user-library-modify%20user-read-playback-state%20user-modify-playback-state%20user-read-currently-playing`;
@@ -82,66 +103,47 @@ app.post("/refresh", async (request: Request, response: Response) => {
     }
 });
 
-app.get("/playlist/teststeezy", async (request: Request, response: Response) => {
-    const accessToken: string | undefined = cache.get("accessToken") as string;
-    if (!accessToken) {
-        response.status(401).json({ error: "Access Token Not Found In These Skreetz" });
-        return;
-    }
-    const spotifyAPI: SpotifyWebAPI = new SpotifyWebAPI({
-        redirectUri: process.env.CLIENT_REDIRECT_URI,
-        clientId: process.env.SPOTIFY_CLIENT_ID,
-        clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-    });
-    spotifyAPI.setAccessToken(accessToken);
-    try {
-        const réponse = await spotifyAPI.getPlaylist("4E7Vswz1uCbsSyh3VF7Dj2");
-        console.log(réponse.body);
-        response.json({
-            name: réponse.body.name,
-            description: réponse.body.description,
-            owner: {
-                name: réponse.body.owner.display_name,
-                url: réponse.body.owner.external_urls.spotify,
-            },
-            songs: réponse.body.tracks.items,
-            totalSongs: réponse.body.tracks.total,
-            previous_url: réponse.body.tracks.previous,
-            next_url: réponse.body.tracks.next,
-        });
-    } catch (err) {
-        console.error("Error fetching songs", err);
-        response.status(500).json({ error: "Error fetching songs" });
-    }
+// ================================================================================================
+
+// Track Management
+
+app.post("/playlists/afrique", async (_, response: Response) => {
+    await populatePlaylist(response, cache, "1x1JZBiYCWxOcinqkZnhGO", Afrique);
 });
 
-app.get("/liked", async (request: Request, response: Response) => {
-    const accessToken: string | undefined = cache.get("accessToken") as string;
-    if (!accessToken) {
-        response.status(401).json({ error: "Access Token Not Found In These Skreetz" });
-        return;
-    }
-    const spotifyAPI: SpotifyWebAPI = new SpotifyWebAPI({
-        redirectUri: process.env.CLIENT_REDIRECT_URI,
-        clientId: process.env.SPOTIFY_CLIENT_ID,
-        clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-    });
-    spotifyAPI.setAccessToken(accessToken);
-    try {
-        const userTracks = await spotifyAPI.getMySavedTracks();
-        const tracks = userTracks.body.items.map((item: any) => {
-            return {
-                name: item.track.name,
-                artist: item.track.artists[0].name,
-                album: item.track.album.name,
-            };
-        });
-        response.json(tracks);
-    } catch (err) {
-        console.error("Error fetching songs", err);
-        response.status(500).json({ error: "Error fetching songs" });
-    }
+app.get("/playlists/afrique", async (_, response: Response) => {
+    const songs = await Afrique.find();
+    response.json(songs);
 });
+
+app.post("/playlists/house", async (_, response: Response) => {
+    await populatePlaylist(response, cache, "6Fbu37ReQN0o2As9AAjMsy", House);
+});
+
+app.get("/playlists/house", async (_, response: Response) => {
+    const songs = await House.find();
+    response.json(songs);
+});
+
+app.post("/playlists/vapourwave", async (_, response: Response) => {
+    await populatePlaylist(response, cache, "4E7Vswz1uCbsSyh3VF7Dj2", House);
+});
+
+app.get("/playlists/vapourwave", async (_, response: Response) => {
+    const songs = await Vapourwave.find();
+    response.json(songs);
+});
+
+app.post("/playlists/liked", async (_, response: Response) => {
+    await populateFavourites(response, cache, Favourites);
+});
+
+app.get("/playlists/liked", async (_, response: Response) => {
+    const songs = await Favourites.find();
+    response.json(songs);
+});
+
+// =================================================================================================
 
 app.listen(PORT, () => {
     console.log("Server listening on Port", PORT);
