@@ -32,7 +32,7 @@ const DATABASE_URL: string = "mongodb://127.0.0.1:27017";
 
 dotenv.config();
 
-app.use(bodyParser.urlencoded());
+app.use(bodyParser.urlencoded()); //@todo: ne pas oublier de le changer à bodyParser.json() quand tout est prêt de deployer
 app.use(
     cors({
         origin: "*",
