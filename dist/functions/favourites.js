@@ -9,9 +9,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.populatePlaylist = void 0;
+exports.populateFavourites = void 0;
 const spotify_1 = require("./spotify");
-function populatePlaylist(response, cache, playlistID, Model) {
+function populateFavourites(response, cache, Model) {
     return __awaiter(this, void 0, void 0, function* () {
         const accessToken = cache.get("accessToken");
         if (!accessToken) {
@@ -21,9 +21,9 @@ function populatePlaylist(response, cache, playlistID, Model) {
         const spotifyAPI = (0, spotify_1.instantiateSpotify)();
         spotifyAPI.setAccessToken(accessToken);
         try {
-            const réponse = yield spotifyAPI.getPlaylist(playlistID);
+            const réponse = yield spotifyAPI.getMySavedTracks();
             console.log(réponse.body);
-            réponse.body.tracks.items.forEach((currentTrack) => __awaiter(this, void 0, void 0, function* () {
+            réponse.body.items.forEach((currentTrack) => __awaiter(this, void 0, void 0, function* () {
                 const albumArtwork = currentTrack.track.album.images.find((currentAlbumImage) => currentAlbumImage.width === 300);
                 const existingTrack = yield Model.findOne({ uri: currentTrack.track.uri });
                 if (existingTrack)
@@ -41,7 +41,7 @@ function populatePlaylist(response, cache, playlistID, Model) {
                     console.error("Problem populating documents to database");
                 }
             }));
-            response.status(200).json({ message: "Songs successfully stored", propotype: réponse.body.tracks });
+            response.status(200).json({ message: "Songs successfully stored", propotype: réponse.body.items });
         }
         catch (err) {
             console.error("Error fetching songs", err);
@@ -49,4 +49,4 @@ function populatePlaylist(response, cache, playlistID, Model) {
         }
     });
 }
-exports.populatePlaylist = populatePlaylist;
+exports.populateFavourites = populateFavourites;

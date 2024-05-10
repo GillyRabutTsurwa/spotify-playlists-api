@@ -42,10 +42,9 @@ const cors_1 = __importDefault(require("cors"));
 const spotify_web_api_node_1 = __importDefault(require("spotify-web-api-node"));
 const node_cache_1 = __importDefault(require("node-cache"));
 const mongoose_1 = __importDefault(require("mongoose"));
-const spotify_1 = require("./functions/spotify");
 const track_1 = require("./models/track");
 const playlists_1 = require("./functions/playlists");
-const liked_1 = __importDefault(require("./models/liked"));
+const favourites_1 = require("./functions/favourites");
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 4242;
 const cache = new node_cache_1.default({
@@ -133,39 +132,32 @@ app.post("/refresh", (request, response) => __awaiter(void 0, void 0, void 0, fu
 }));
 // ================================================================================================
 // Track Management
-app.post("/playlist/afrique", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
-    const spotifyAPI = (0, spotify_1.instantiateSpotify)();
-    yield (0, playlists_1.populatePlaylist)(response, cache, yield spotifyAPI.getPlaylist("6Fbu37ReQN0o2As9AAjMsy"), track_1.Afrique);
+app.post("/playlists/afrique", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
+    yield (0, playlists_1.populatePlaylist)(response, cache, "1x1JZBiYCWxOcinqkZnhGO", track_1.Afrique);
 }));
 app.get("/playlists/afrique", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
     const songs = yield track_1.Afrique.find();
     response.json(songs);
 }));
-app.post("/playlist/house", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
-    const spotifyAPI = (0, spotify_1.instantiateSpotify)();
-    const fetchPlaylist = yield spotifyAPI.getPlaylist("6Fbu37ReQN0o2As9AAjMsy");
-    yield (0, playlists_1.populatePlaylist)(response, cache, fetchPlaylist, track_1.House);
+app.post("/playlists/house", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
+    yield (0, playlists_1.populatePlaylist)(response, cache, "6Fbu37ReQN0o2As9AAjMsy", track_1.House);
 }));
 app.get("/playlists/house", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
     const songs = yield track_1.House.find();
     response.json(songs);
 }));
-app.post("/playlist/vapourwave", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
-    const spotifyAPI = (0, spotify_1.instantiateSpotify)();
-    const fetchPlaylist = yield spotifyAPI.getPlaylist("4E7Vswz1uCbsSyh3VF7Dj2");
-    yield (0, playlists_1.populatePlaylist)(response, cache, fetchPlaylist, track_1.Vapourwave);
+app.post("/playlists/vapourwave", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
+    yield (0, playlists_1.populatePlaylist)(response, cache, "4E7Vswz1uCbsSyh3VF7Dj2", track_1.House);
 }));
 app.get("/playlists/vapourwave", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
     const songs = yield track_1.Vapourwave.find();
     response.json(songs);
 }));
 app.post("/playlists/liked", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
-    const spotifyAPI = (0, spotify_1.instantiateSpotify)();
-    const fetchPlaylist = yield spotifyAPI.getMySavedTracks();
-    yield (0, playlists_1.populatePlaylist)(response, cache, fetchPlaylist, liked_1.default);
+    yield (0, favourites_1.populateFavourites)(response, cache, track_1.Favourites);
 }));
 app.get("/playlists/liked", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
-    const songs = yield liked_1.default.find();
+    const songs = yield track_1.Favourites.find();
     response.json(songs);
 }));
 // =================================================================================================
