@@ -5,9 +5,10 @@ import cors from "cors";
 import SpotifyWebAPI from "spotify-web-api-node";
 import NodeCache from "node-cache";
 import mongoose from "mongoose";
-import Vapourwave from "./models/vapourwave";
-import Liked from "./models/liked";
+import { instantiateSpotify } from "./functions/spotify";
+import { Afrique, House, Favourites, Vapourwave } from "./models/track";
 import { populatePlaylist } from "./functions/playlists";
+import { populateFavourites } from "./functions/favourites";
 
 const app: Express = express();
 const PORT: number | string = process.env.PORT || 4242;
@@ -106,8 +107,26 @@ app.post("/refresh", async (request: Request, response: Response) => {
 
 // Track Management
 
-app.post("/playlist/vapourwave", async (_, response: Response) => {
-    await populatePlaylist(response, cache, "4E7Vswz1uCbsSyh3VF7Dj2", Vapourwave);
+app.post("/playlists/afrique", async (_, response: Response) => {
+    await populatePlaylist(response, cache, "1x1JZBiYCWxOcinqkZnhGO", Afrique);
+});
+
+app.get("/playlists/afrique", async (_, response: Response) => {
+    const songs = await Afrique.find();
+    response.json(songs);
+});
+
+app.post("/playlists/house", async (_, response: Response) => {
+    await populatePlaylist(response, cache, "6Fbu37ReQN0o2As9AAjMsy", House);
+});
+
+app.get("/playlists/house", async (_, response: Response) => {
+    const songs = await House.find();
+    response.json(songs);
+});
+
+app.post("/playlists/vapourwave", async (_, response: Response) => {
+    await populatePlaylist(response, cache, "4E7Vswz1uCbsSyh3VF7Dj2", House);
 });
 
 app.get("/playlists/vapourwave", async (_, response: Response) => {
@@ -115,47 +134,12 @@ app.get("/playlists/vapourwave", async (_, response: Response) => {
     response.json(songs);
 });
 
-app.post("/playlists/liked", async (request: Request, response: Response) => {
-    const accessToken: string | undefined = cache.get("accessToken") as string;
-    if (!accessToken) {
-        response.status(401).json({ error: "Access Token Not Found In These Skreetz" });
-        return;
-    }
-    const spotifyAPI: SpotifyWebAPI = new SpotifyWebAPI({
-        redirectUri: process.env.CLIENT_REDIRECT_URI,
-        clientId: process.env.SPOTIFY_CLIENT_ID,
-        clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-    });
-    spotifyAPI.setAccessToken(accessToken);
-    try {
-        const réponse = await spotifyAPI.getMySavedTracks();
-        console.log(réponse.body);
-
-        réponse.body.items.forEach(async (currentTrack: any) => {
-            const albumArtwork = currentTrack.track.album.images.find((currentAlbumImage: any) => currentAlbumImage.width === 300);
-            const existingTrack = await Liked.findOne({ uri: currentTrack.track.uri });
-            if (existingTrack) return;
-            try {
-                await Liked.create({
-                    artist: currentTrack.track.artists[0].name,
-                    title: currentTrack.track.name,
-                    uri: currentTrack.track.uri,
-                    album: currentTrack.track.album.name,
-                    albumImg: albumArtwork.url,
-                });
-            } catch (err) {
-                console.error("Problem populating documents to database");
-            }
-        });
-        response.status(200).json({ message: "Songs successfully stored", propotype: réponse.body.items });
-    } catch (err) {
-        console.error("Error fetching songs", err);
-        response.status(500).json({ error: "Error fetching songs" });
-    }
+app.post("/playlists/liked", async (_, response: Response) => {
+    await populateFavourites(response, cache, Favourites);
 });
 
 app.get("/playlists/liked", async (_, response: Response) => {
-    const songs = await Liked.find();
+    const songs = await Favourites.find();
     response.json(songs);
 });
 
