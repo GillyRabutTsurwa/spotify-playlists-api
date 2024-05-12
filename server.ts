@@ -1,3 +1,4 @@
+import path from "path";
 import * as dotenv from "dotenv";
 import express, { Express, Request, Response } from "express";
 import bodyParser from "body-parser";
@@ -10,12 +11,20 @@ import { Afrique, House, Favourites, Vapourwave } from "./models/track";
 import { populatePlaylist } from "./functions/playlists";
 import { populateFavourites } from "./functions/favourites";
 
+dotenv.config({
+    path: path.join(__dirname, `.env.${process.env.NODE_ENV}`),
+});
+
 const app: Express = express();
 const PORT: number | string = process.env.PORT || 4242;
 const cache = new NodeCache({
     stdTTL: 3600,
 });
-const DATABASE_URL: string = "mongodb://127.0.0.1:27017";
+const DATABASE_URL: string = process.env.MONGODB_URI as string;
+
+console.log(process.env.CLIENT_URL);
+console.log(process.env.CLIENT_REDIRECT_URI);
+console.log(process.env.MONGODB_URI);
 
 (async () => {
     try {
@@ -30,9 +39,7 @@ const DATABASE_URL: string = "mongodb://127.0.0.1:27017";
     }
 })();
 
-dotenv.config();
-
-app.use(bodyParser.urlencoded()); //@todo: ne pas oublier de le changer à bodyParser.json() quand tout est prêt de deployer
+app.use(bodyParser.urlencoded({ extended: true })); //@todo: ne pas oublier de le changer à bodyParser.json() quand tout est prêt de deployer
 app.use(
     cors({
         origin: "*",

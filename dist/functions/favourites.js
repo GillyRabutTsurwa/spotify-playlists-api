@@ -20,28 +20,56 @@ function populateFavourites(response, cache, Model) {
         }
         const spotifyAPI = (0, spotify_1.instantiateSpotify)();
         spotifyAPI.setAccessToken(accessToken);
-        try {
-            const réponse = yield spotifyAPI.getMySavedTracks();
-            console.log(réponse.body);
-            réponse.body.items.forEach((currentTrack) => __awaiter(this, void 0, void 0, function* () {
-                const albumArtwork = currentTrack.track.album.images.find((currentAlbumImage) => currentAlbumImage.width === 300);
-                const existingTrack = yield Model.findOne({ uri: currentTrack.track.uri });
-                if (existingTrack)
-                    return;
+        function fetchAllTracks() {
+            return __awaiter(this, void 0, void 0, function* () {
+                let allTracks = [];
+                let next = null;
+                let limit = 0;
+                let offset = 100;
                 try {
-                    yield Model.create({
-                        artist: currentTrack.track.artists[0].name,
-                        title: currentTrack.track.name,
-                        uri: currentTrack.track.uri,
-                        album: currentTrack.track.album.name,
-                        albumImg: albumArtwork.url,
-                    });
+                    do {
+                        const réponse = yield spotifyAPI.getMySavedTracks({
+                            limit: limit,
+                            offset: offset,
+                        });
+                        const tracks = réponse.body.items;
+                        allTracks.push(...tracks);
+                        offset += limit;
+                        next = réponse.body.next;
+                    } while (next);
+                    return allTracks;
                 }
                 catch (err) {
-                    console.error("Problem populating documents to database");
+                    console.error("Error fetching songs", err);
                 }
-            }));
-            response.status(200).json({ message: "Songs successfully stored", propotype: réponse.body.items });
+            });
+        }
+        try {
+            // const tracks = await fetchAllTracks();
+            fetchAllTracks()
+                .then((data) => {
+                console.log(data);
+                response.status(200).json({ message: "Songs successfully stored", propotype: data });
+            })
+                .catch((err) => {
+                console.error(err);
+            });
+            // tracks?.forEach(async (currentTrack: any) => {
+            //     const albumArtwork = currentTrack.track.album.images.find((currentAlbumImage: any) => currentAlbumImage.width === 300);
+            //     const existingTrack = await Model.findOne({ uri: currentTrack.track.uri });
+            //     if (existingTrack) return;
+            //     try {
+            //         await Model.create({
+            //             artist: currentTrack.track.artists[0].name,
+            //             title: currentTrack.track.name,
+            //             uri: currentTrack.track.uri,
+            //             album: currentTrack.track.album.name,
+            //             albumImg: albumArtwork.url,
+            //         });
+            //     } catch (err) {
+            //         console.error("Problem populating documents to database");
+            //     }
+            // });
         }
         catch (err) {
             console.error("Error fetching songs", err);

@@ -4,11 +4,14 @@
     "description": "",
     "main": "server.js",
     "scripts": {
+        "predev": "npm run build",
+        "dev": "NODE_ENV=testing nodemon server.ts",
         "preserve": "npm run build",
         "serve": "NODE_ENV=development nodemon server.ts",
         "build": "rimraf dist && tsc",
-        "prestart": "npm run build",
-        "start": "node dist/server.js"
+        "minify": "find dist/ -type f -name \"*.js\" -exec terser {} -o {} --compress --mangle \\;",
+        "prestart": "npm run build && npm run minify",
+        "start": "node -r dotenv/config dist/server.js"
     },
     "keywords": [],
     "author": "",
