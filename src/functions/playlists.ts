@@ -25,8 +25,10 @@ export async function populatePlaylist(response: Response, cache: NodeCache, pla
                     artist: currentTrack.track.artists[0].name,
                     title: currentTrack.track.name,
                     uri: currentTrack.track.uri,
-                    album: currentTrack.track.album.name,
-                    albumImg: albumArtwork.url,
+                    album: {
+                        name: currentTrack.track.album.name,
+                        images: currentTrack.track.album.images,
+                    },
                 });
             } catch (err) {
                 console.error("Problem populating documents to database");

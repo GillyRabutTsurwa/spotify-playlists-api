@@ -2,6 +2,11 @@ import mongoose, { Schema } from "mongoose";
 import { Track } from "../interface/track";
 
 interface ITrack extends Track {}
+interface AlbumCover {
+    url: string;
+    width: number;
+    height: number;
+}
 
 const trackSchema: Schema = new mongoose.Schema<ITrack>({
     title: {
@@ -17,12 +22,8 @@ const trackSchema: Schema = new mongoose.Schema<ITrack>({
         required: true,
     },
     album: {
-        type: String,
-        required: true,
-    },
-    albumImg: {
-        type: String,
-        required: true,
+        name: String,
+        images: Array<AlbumCover>,
     },
 });
 
