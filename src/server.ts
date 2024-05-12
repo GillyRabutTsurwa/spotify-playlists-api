@@ -12,7 +12,7 @@ import { populatePlaylist } from "./functions/playlists";
 import { populateFavourites } from "./functions/favourites";
 
 dotenv.config({
-    path: path.join(__dirname, `.env.${process.env.NODE_ENV}`),
+    path: path.join(__dirname, `../.env.${process.env.NODE_ENV}`),
 });
 
 const app: Express = express();

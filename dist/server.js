@@ -47,7 +47,7 @@ const track_1 = require("./models/track");
 const playlists_1 = require("./functions/playlists");
 const favourites_1 = require("./functions/favourites");
 dotenv.config({
-    path: path_1.default.join(__dirname, `.env.${process.env.NODE_ENV}`),
+    path: path_1.default.join(__dirname, `../.env.${process.env.NODE_ENV}`),
 });
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 4242;
