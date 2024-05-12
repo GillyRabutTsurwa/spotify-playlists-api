@@ -19,12 +19,8 @@ const trackSchema = new mongoose_1.default.Schema({
         required: true,
     },
     album: {
-        type: String,
-        required: true,
-    },
-    albumImg: {
-        type: String,
-        required: true,
+        name: String,
+        images: (Array),
     },
 });
 //NOTE: on peut aussi spécifier le nom du collection avec le 3ème argument dans la fonction model()

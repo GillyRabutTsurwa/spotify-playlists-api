@@ -11,7 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.populatePlaylist = void 0;
 const spotify_1 = require("./spotify");
-function populatePlaylist(response, cache, playlistID, Model) {
+function populatePlaylist(response, cache, playlistID, Model, songs) {
     return __awaiter(this, void 0, void 0, function* () {
         const accessToken = cache.get("accessToken");
         if (!accessToken) {
@@ -33,15 +33,17 @@ function populatePlaylist(response, cache, playlistID, Model) {
                         artist: currentTrack.track.artists[0].name,
                         title: currentTrack.track.name,
                         uri: currentTrack.track.uri,
-                        album: currentTrack.track.album.name,
-                        albumImg: albumArtwork.url,
+                        album: {
+                            name: currentTrack.track.album.name,
+                            images: currentTrack.track.album.images,
+                        },
                     });
                 }
                 catch (err) {
                     console.error("Problem populating documents to database");
                 }
             }));
-            response.status(200).json({ message: "Songs successfully stored", propotype: réponse.body.tracks });
+            response.status(200).json({ message: "Songs successfully stored", playlist: songs });
         }
         catch (err) {
             console.error("Error fetching songs", err);

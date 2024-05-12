@@ -3,7 +3,7 @@ import { instantiateSpotify } from "./spotify";
 import NodeCache from "node-cache";
 import SpotifyWebAPI from "spotify-web-api-node";
 
-export async function populatePlaylist(response: Response, cache: NodeCache, playlistID: string, Model: any) {
+export async function populatePlaylist(response: Response, cache: NodeCache, playlistID: string, Model: any, songs: any[]) {
     const accessToken: string | undefined = cache.get("accessToken") as string;
     if (!accessToken) {
         response.status(401).json({ error: "Access Token Not Found In These Skreetz" });
@@ -34,7 +34,7 @@ export async function populatePlaylist(response: Response, cache: NodeCache, pla
                 console.error("Problem populating documents to database");
             }
         });
-        response.status(200).json({ message: "Songs successfully stored", propotype: réponse.body.tracks });
+        response.status(200).json({ message: "Songs successfully stored", playlist: songs });
     } catch (err) {
         console.error("Error fetching songs", err);
         response.status(500).json({ error: "Error fetching songs" });

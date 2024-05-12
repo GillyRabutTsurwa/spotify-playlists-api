@@ -39,8 +39,34 @@ console.log(process.env.MONGODB_URI);
     }
 })();
 
-app.use(bodyParser.urlencoded({ extended: true })); //@todo: ne pas oublier de le changer à bodyParser.json() quand tout est prêt de deployer
+function configBodyParser() {
+    return process.env.NODE_ENV !== "production" ? bodyParser.urlencoded({ extended: true }) : bodyParser.json();
+}
+
+// NOTE: cached token handling. refresh access token upon expiration
+cache.on("expired", async (key: string, value: string) => {
+    if (key === "accessToken") {
+        console.log(`${key} key is expired`);
+        const refreshToken = cache.get("refreshToken") as string;
+        const spotifyAPI: SpotifyWebAPI = instantiateSpotify();
+        spotifyAPI.setRefreshToken(refreshToken);
+
+        try {
+            const tokenResponse = await spotifyAPI.refreshAccessToken();
+            const data = tokenResponse.body;
+            console.log(data);
+            value = data.access_token;
+            cache.set("accessToken", value);
+        } catch (err) {
+            console.error("Could not refresh accesss token", err);
+        } finally {
+            console.log("Done attempting access token refresh");
+        }
+    }
+});
+
 app.use(
+    configBodyParser(),
     cors({
         origin: "*",
     })
@@ -62,17 +88,18 @@ app.get("/authorisation", (_, response: Response) => {
 
 app.post("/login", async (request: Request, response: Response) => {
     const code: string = request.body.code;
-    const spotifyAPI: SpotifyWebAPI = new SpotifyWebAPI({
-        redirectUri: process.env.CLIENT_REDIRECT_URI,
-        clientId: process.env.SPOTIFY_CLIENT_ID,
-        clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-    });
+    const spotifyAPI: SpotifyWebAPI = instantiateSpotify();
 
     try {
         const authResponse = await spotifyAPI.authorizationCodeGrant(code);
         const data = authResponse.body;
         console.log(data);
         cache.set("accessToken", data.access_token);
+        cache.set("refreshToken", data.refresh_token, 0);
+        const tokenAccess = cache.get("accessToken");
+        const tokenRefresh = cache.get("refreshToken");
+        console.log(`AccessToken in Cache: ${tokenAccess}`);
+        console.log(`RefreshToken in Cache: ${tokenRefresh}`);
         response.json({
             accessToken: data.access_token,
             refreshToken: data.refresh_token,
@@ -85,69 +112,28 @@ app.post("/login", async (request: Request, response: Response) => {
     }
 });
 
-app.post("/refresh", async (request: Request, response: Response) => {
-    const refreshToken: string = request.body.refreshToken;
-    const spotifyAPI: SpotifyWebAPI = new SpotifyWebAPI({
-        redirectUri: process.env.CLIENT_REDIRECT_URI,
-        clientId: process.env.SPOTIFY_CLIENT_ID,
-        clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-        refreshToken: refreshToken,
-    });
-
-    try {
-        const tokenResponse = await spotifyAPI.refreshAccessToken();
-        const data = tokenResponse.body;
-        console.log(data);
-        cache.set("accessToken", data.access_token);
-        response.json({
-            accessToken: data.access_token,
-            expiresIn: data.expires_in,
-        });
-    } catch (err) {
-        console.error("Could not refresh accesss token", err);
-    } finally {
-        console.log("Done attempting access token refresh");
-    }
-});
-
 // ================================================================================================
 
 // Track Management
 
-app.post("/playlists/afrique", async (_, response: Response) => {
-    await populatePlaylist(response, cache, "1x1JZBiYCWxOcinqkZnhGO", Afrique);
-});
-
 app.get("/playlists/afrique", async (_, response: Response) => {
     const songs = await Afrique.find();
-    response.json(songs);
-});
-
-app.post("/playlists/house", async (_, response: Response) => {
-    await populatePlaylist(response, cache, "6Fbu37ReQN0o2As9AAjMsy", House);
+    await populatePlaylist(response, cache, "1x1JZBiYCWxOcinqkZnhGO", Afrique, songs);
 });
 
 app.get("/playlists/house", async (_, response: Response) => {
     const songs = await House.find();
-    response.json(songs);
-});
-
-app.post("/playlists/vapourwave", async (_, response: Response) => {
-    await populatePlaylist(response, cache, "4E7Vswz1uCbsSyh3VF7Dj2", House);
+    await populatePlaylist(response, cache, "6Fbu37ReQN0o2As9AAjMsy", House, songs);
 });
 
 app.get("/playlists/vapourwave", async (_, response: Response) => {
     const songs = await Vapourwave.find();
-    response.json(songs);
-});
-
-app.post("/playlists/liked", async (_, response: Response) => {
-    await populateFavourites(response, cache, Favourites);
+    await populatePlaylist(response, cache, "4E7Vswz1uCbsSyh3VF7Dj2", Vapourwave, songs);
 });
 
 app.get("/playlists/liked", async (_, response: Response) => {
     const songs = await Favourites.find();
-    response.json(songs);
+    await populateFavourites(response, cache, Favourites, songs);
 });
 
 // =================================================================================================

@@ -40,9 +40,9 @@ const dotenv = __importStar(require("dotenv"));
 const express_1 = __importDefault(require("express"));
 const body_parser_1 = __importDefault(require("body-parser"));
 const cors_1 = __importDefault(require("cors"));
-const spotify_web_api_node_1 = __importDefault(require("spotify-web-api-node"));
 const node_cache_1 = __importDefault(require("node-cache"));
 const mongoose_1 = __importDefault(require("mongoose"));
+const spotify_1 = require("./functions/spotify");
 const track_1 = require("./models/track");
 const playlists_1 = require("./functions/playlists");
 const favourites_1 = require("./functions/favourites");
@@ -72,8 +72,32 @@ console.log(process.env.MONGODB_URI);
         mongoose_1.default.set("debug", true);
     }
 }))();
-app.use(body_parser_1.default.urlencoded({ extended: true })); //@todo: ne pas oublier de le changer à bodyParser.json() quand tout est prêt de deployer
-app.use((0, cors_1.default)({
+function configBodyParser() {
+    return process.env.NODE_ENV !== "production" ? body_parser_1.default.urlencoded({ extended: true }) : body_parser_1.default.json();
+}
+// NOTE: cached token handling. refresh access token upon expiration
+cache.on("expired", (key, value) => __awaiter(void 0, void 0, void 0, function* () {
+    if (key === "accessToken") {
+        console.log(`${key} key is expired`);
+        const refreshToken = cache.get("refreshToken");
+        const spotifyAPI = (0, spotify_1.instantiateSpotify)();
+        spotifyAPI.setRefreshToken(refreshToken);
+        try {
+            const tokenResponse = yield spotifyAPI.refreshAccessToken();
+            const data = tokenResponse.body;
+            console.log(data);
+            value = data.access_token;
+            cache.set("accessToken", value);
+        }
+        catch (err) {
+            console.error("Could not refresh accesss token", err);
+        }
+        finally {
+            console.log("Done attempting access token refresh");
+        }
+    }
+}));
+app.use(configBodyParser(), (0, cors_1.default)({
     origin: "*",
 }));
 app.get("/", (_, response) => {
@@ -88,16 +112,17 @@ app.get("/authorisation", (_, response) => {
 });
 app.post("/login", (request, response) => __awaiter(void 0, void 0, void 0, function* () {
     const code = request.body.code;
-    const spotifyAPI = new spotify_web_api_node_1.default({
-        redirectUri: process.env.CLIENT_REDIRECT_URI,
-        clientId: process.env.SPOTIFY_CLIENT_ID,
-        clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-    });
+    const spotifyAPI = (0, spotify_1.instantiateSpotify)();
     try {
         const authResponse = yield spotifyAPI.authorizationCodeGrant(code);
         const data = authResponse.body;
         console.log(data);
         cache.set("accessToken", data.access_token);
+        cache.set("refreshToken", data.refresh_token, 0);
+        const tokenAccess = cache.get("accessToken");
+        const tokenRefresh = cache.get("refreshToken");
+        console.log(`AccessToken in Cache: ${tokenAccess}`);
+        console.log(`RefreshToken in Cache: ${tokenRefresh}`);
         response.json({
             accessToken: data.access_token,
             refreshToken: data.refresh_token,
@@ -111,60 +136,23 @@ app.post("/login", (request, response) => __awaiter(void 0, void 0, void 0, func
         console.log("Done retrieval attempt of access token");
     }
 }));
-app.post("/refresh", (request, response) => __awaiter(void 0, void 0, void 0, function* () {
-    const refreshToken = request.body.refreshToken;
-    const spotifyAPI = new spotify_web_api_node_1.default({
-        redirectUri: process.env.CLIENT_REDIRECT_URI,
-        clientId: process.env.SPOTIFY_CLIENT_ID,
-        clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-        refreshToken: refreshToken,
-    });
-    try {
-        const tokenResponse = yield spotifyAPI.refreshAccessToken();
-        const data = tokenResponse.body;
-        console.log(data);
-        cache.set("accessToken", data.access_token);
-        response.json({
-            accessToken: data.access_token,
-            expiresIn: data.expires_in,
-        });
-    }
-    catch (err) {
-        console.error("Could not refresh accesss token", err);
-    }
-    finally {
-        console.log("Done attempting access token refresh");
-    }
-}));
 // ================================================================================================
 // Track Management
-app.post("/playlists/afrique", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
-    yield (0, playlists_1.populatePlaylist)(response, cache, "1x1JZBiYCWxOcinqkZnhGO", track_1.Afrique);
-}));
 app.get("/playlists/afrique", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
     const songs = yield track_1.Afrique.find();
-    response.json(songs);
-}));
-app.post("/playlists/house", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
-    yield (0, playlists_1.populatePlaylist)(response, cache, "6Fbu37ReQN0o2As9AAjMsy", track_1.House);
+    yield (0, playlists_1.populatePlaylist)(response, cache, "1x1JZBiYCWxOcinqkZnhGO", track_1.Afrique, songs);
 }));
 app.get("/playlists/house", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
     const songs = yield track_1.House.find();
-    response.json(songs);
-}));
-app.post("/playlists/vapourwave", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
-    yield (0, playlists_1.populatePlaylist)(response, cache, "4E7Vswz1uCbsSyh3VF7Dj2", track_1.House);
+    yield (0, playlists_1.populatePlaylist)(response, cache, "6Fbu37ReQN0o2As9AAjMsy", track_1.House, songs);
 }));
 app.get("/playlists/vapourwave", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
     const songs = yield track_1.Vapourwave.find();
-    response.json(songs);
-}));
-app.post("/playlists/liked", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
-    yield (0, favourites_1.populateFavourites)(response, cache, track_1.Favourites);
+    yield (0, playlists_1.populatePlaylist)(response, cache, "4E7Vswz1uCbsSyh3VF7Dj2", track_1.Vapourwave, songs);
 }));
 app.get("/playlists/liked", (_, response) => __awaiter(void 0, void 0, void 0, function* () {
     const songs = yield track_1.Favourites.find();
-    response.json(songs);
+    yield (0, favourites_1.populateFavourites)(response, cache, track_1.Favourites, songs);
 }));
 // =================================================================================================
 app.listen(PORT, () => {

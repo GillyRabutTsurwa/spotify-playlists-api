@@ -11,7 +11,7 @@
         "build": "rimraf dist && tsc",
         "minify": "find dist/ -type f -name \"*.js\" -exec terser {} -o {} --compress --mangle \\;",
         "prestart": "npm run build && npm run minify",
-        "start": "node -r dotenv/config dist/server.js"
+        "start": "NODE_ENV=production node -r dotenv/config dist/server.js"
     },
     "keywords": [],
     "author": "",
