@@ -17,7 +17,6 @@ export async function populatePlaylist(response: Response, cache: NodeCache, pla
         console.log(réponse.body);
 
         réponse.body.tracks.items.forEach(async (currentTrack: any) => {
-            const albumArtwork = currentTrack.track.album.images.find((currentAlbumImage: any) => currentAlbumImage.width === 300);
             const existingTrack = await Model.findOne({ uri: currentTrack.track.uri });
             if (existingTrack) return;
             try {
