@@ -24,7 +24,6 @@ function populatePlaylist(response, cache, playlistID, Model, songs) {
             const réponse = yield spotifyAPI.getPlaylist(playlistID);
             console.log(réponse.body);
             réponse.body.tracks.items.forEach((currentTrack) => __awaiter(this, void 0, void 0, function* () {
-                const albumArtwork = currentTrack.track.album.images.find((currentAlbumImage) => currentAlbumImage.width === 300);
                 const existingTrack = yield Model.findOne({ uri: currentTrack.track.uri });
                 if (existingTrack)
                     return;

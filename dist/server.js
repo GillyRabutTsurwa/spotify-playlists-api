@@ -95,7 +95,9 @@ cache.on("expired", (key, value) => __awaiter(void 0, void 0, void 0, function* 
         }
     }
 }));
-app.use(body_parser_1.default.urlencoded({ extended: true }), (0, cors_1.default)({
+app.use(
+// bodyParser.urlencoded({ extended: true }),
+body_parser_1.default.json(), (0, cors_1.default)({
     origin: "*",
 }));
 app.get("/", (_, response) => {
@@ -234,6 +236,24 @@ app.post("/playlists", (request, response) => __awaiter(void 0, void 0, void 0, 
     }
     catch (error) {
         response.status(400).json({ error: "Something went wrong" });
+    }
+}));
+app.post("/playlist", (request, response) => __awaiter(void 0, void 0, void 0, function* () {
+    const playlistID = request.body.playlistID;
+    const accessToken = cache.get("accessToken");
+    if (!accessToken) {
+        response.status(401).json({ error: "Access Token Not Found In These Skreetz" });
+        return;
+    }
+    const spotifyAPI = (0, spotify_1.instantiateSpotify)();
+    spotifyAPI.setAccessToken(accessToken);
+    try {
+        const réponse = yield spotifyAPI.getPlaylistTracks(playlistID);
+        const tracks = réponse.body.items;
+        response.status(200).json(tracks);
+    }
+    catch (err) {
+        response.status(400).json({ error: err });
     }
 }));
 app.get("/playlists/afrique", (_, response) => __awaiter(void 0, void 0, void 0, function* () {

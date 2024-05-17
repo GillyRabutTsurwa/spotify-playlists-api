@@ -213,7 +213,8 @@ app.post("/playlists", async (request: Request, response: Response) => {
             }
         });
         const dbPlaylists = await Playlist.find();
-        response.status(200).json(dbPlaylists);
+        // response.status(200).json(dbPlaylists); //NOTE ceci derange les chose ches la client
+        response.status(200).json(playlists);
     } catch (error) {
         response.status(400).json({ error: "Something went wrong" });
     }

@@ -24,7 +24,6 @@ function populateFavourites(response, cache, Model, songs) {
             const réponse = yield spotifyAPI.getMySavedTracks();
             console.log(réponse.body);
             réponse.body.items.forEach((currentTrack) => __awaiter(this, void 0, void 0, function* () {
-                const albumArtwork = currentTrack.track.album.images.find((currentAlbumImage) => currentAlbumImage.width === 300);
                 const existingTrack = yield Model.findOne({ uri: currentTrack.track.uri });
                 if (existingTrack)
                     return;
